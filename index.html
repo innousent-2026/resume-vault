@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Resume Vault — A Recruiter in Your Pocket | Dream Job Finder</title>
+  <meta name="description" content="Two interactive AI coaching tools built by a 20-year HR insider. The Resume Vault interviews you and rewrites your resume. The Interview Room runs your mock interview. $9.99 each, one-time, no subscription.">
+  <meta property="og:title" content="The Resume Vault — What if a recruiter rewrote your resume?">
+  <meta property="og:description" content="Interactive AI tools by a 20-year HR professional. Works free inside ChatGPT, Claude, or Gemini. $9.99 one-time, no subscription.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dream-job-finder.replit.app">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "The Resume Vault — Interactive Resume Rewriter",
+    "description": "An interactive AI prompt tool that interviews you for your real accomplishments and writes a clean, ATS-friendly resume. Built by a 20-year HR and recruiting professional.",
+    "brand": { "@type": "Brand", "name": "Dream Job Finder" },
+    "offers": {
+      "@type": "Offer",
+      "price": "9.99",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ======= NAV ======= -->
+  <header class="nav" id="top">
+    <div class="nav-inner">
+      <a href="#top" class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="16" cy="16" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+          <line x1="16" y1="2" x2="16" y2="9" stroke="currentColor" stroke-width="2"/>
+          <line x1="16" y1="23" x2="16" y2="30" stroke="currentColor" stroke-width="2"/>
+          <line x1="2" y1="16" x2="9" y2="16" stroke="currentColor" stroke-width="2"/>
+          <line x1="23" y1="16" x2="30" y2="16" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span class="brand-text">
+          <span class="brand-name">The Resume Vault</span>
+          <span class="brand-sub">by Dream Job Finder</span>
+        </span>
+      </a>
+      <nav class="nav-links" id="navLinks">
+        <a href="#tools">The Tools</a>
+        <a href="#how">How It Works</a>
+        <a href="#about">The Recruiter</a>
+        <a href="#agencies">For Agencies</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <a href="#pricing" class="btn btn-gold btn-nav">Get the Tools — $9.99</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ======= HERO ======= -->
+  <section class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow reveal">Dream Job Finder · Recommended Job-Seeker Resource</p>
+        <h1 class="reveal d1">What if a recruiter rewrote your resume —<br><em>and ran your practice interview?</em></h1>
+        <p class="lede reveal d2">Two interactive AI coaching tools, built by a 20-year HR professional, that coach you one question at a time. Works free inside ChatGPT, Claude, or Gemini.</p>
+        <div class="hero-ctas reveal d3">
+          <a href="#pricing" class="btn btn-gold btn-lg">Get the Tools — $9.99 each</a>
+          <a href="#how" class="btn btn-ghost btn-lg">See how it works</a>
+        </div>
+        <ul class="hero-trust reveal d4">
+          <li>One-time price · No subscription</li>
+          <li>Unlimited reuse, every application</li>
+          <li>No account · No data collected</li>
+        </ul>
+      </div>
+
+      <!-- Simulated coaching chat -->
+      <div class="hero-demo reveal d3" aria-hidden="true">
+        <div class="chat-window">
+          <div class="chat-titlebar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="chat-title">Your AI Recruiter · Free AI app</span>
+          </div>
+          <div class="chat-body" id="chatBody">
+            <div class="msg ai">Let's find your real wins. At your last job, what's something you fixed, improved, or kept running?</div>
+            <div class="msg user">I handled scheduling for the whole warehouse… not sure that counts?</div>
+            <div class="msg ai">It absolutely counts. How many people were on that schedule each week?</div>
+            <div class="msg user">Around 40, across two shifts.</div>
+            <div class="msg ai">✦ Resume line drafted:<br><strong>"Coordinated weekly schedules for 40+ staff across two shifts, keeping coverage at 100% during peak season."</strong></div>
+          </div>
+          <div class="chat-input">
+            <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+            <span class="chat-hint">The AI asks. You answer. It writes.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="works-with">
+      <p>Works on the <strong>free tiers</strong> of</p>
+      <div class="works-logos">
+        <span>ChatGPT</span><span class="sep">·</span>
+        <span>Claude</span><span class="sep">·</span>
+        <span>Gemini</span><span class="sep">·</span>
+        <span>Copilot</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======= PROBLEM ======= -->
+  <section class="problem">
+    <div class="container narrow">
+      <p class="eyebrow center reveal">Sound familiar?</p>
+      <h2 class="center serif-italic reveal d1">You're qualified. You're applying everywhere.<br>And you're hearing nothing.</h2>
+      <p class="center lede reveal d2">The problem isn't you — it's a resume that doesn't show your wins, and interviews you've never had a chance to practice. Generic AI tools and bad templates produce robotic resumes that recruiters skim past in five seconds.</p>
+    </div>
+  </section>
+
+  <!-- ======= THE TWO TOOLS ======= -->
+  <section class="tools" id="tools">
+    <div class="container">
+      <p class="eyebrow center reveal">The two tools — $9.99 each, one-time</p>
+      <h2 class="center reveal d1">A recruiter's brain, in a file you paste.</h2>
+
+      <div class="tool-cards">
+        <article class="tool-card reveal">
+          <div class="tool-rule"></div>
+          <p class="tool-kicker">Tool 01 · The Resume Vault</p>
+          <h3>The AI Resume Rewriter</h3>
+          <p class="tool-desc">Paste one file into a free AI app, and it becomes a recruiter who interviews <em>you</em> — then writes your resume.</p>
+          <ul class="check-list">
+            <li>Asks the questions that find your real accomplishments</li>
+            <li>"I don't know" is okay — it helps you find your numbers</li>
+            <li>Explains job gaps in one calm, professional line</li>
+            <li>Clean, single-column format hiring systems &amp; recruiters can read</li>
+            <li>Comes with a recruiter-built, ready-to-fill resume template</li>
+          </ul>
+          <a href="#pricing" class="btn btn-outline">Get the Resume Rewriter</a>
+        </article>
+
+        <article class="tool-card reveal d2">
+          <div class="tool-rule"></div>
+          <p class="tool-kicker">Tool 02 · The Interview Room</p>
+          <h3>The AI Interview Coach</h3>
+          <p class="tool-desc">A full practice interview, any time, judgment-free — as gentle or as tough as you choose.</p>
+          <ul class="check-list">
+            <li>Asks real interview questions, one at a time</li>
+            <li>Scores every answer on a 30-point rubric — then shows you a stronger version in your own voice</li>
+            <li>Covers salary questions, gaps &amp; "tell me about yourself"</li>
+            <li>Three levels: friendly recruiter → tough panel</li>
+            <li>Ends with a one-page cheat sheet for interview morning</li>
+          </ul>
+          <a href="#pricing" class="btn btn-outline">Get the Interview Coach</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======= HOW IT WORKS ======= -->
+  <section class="how" id="how">
+    <div class="container">
+      <p class="eyebrow center reveal">How it works — about 3 minutes to start</p>
+      <h2 class="center reveal d1">If you can copy and paste,<br>you can use this.</h2>
+      <div class="steps">
+        <div class="step reveal">
+          <span class="step-num">1</span>
+          <h3>Get the tools</h3>
+          <p>Buy once online. Both tools download instantly to your phone or computer.</p>
+        </div>
+        <div class="step-arrow reveal d1" aria-hidden="true">→</div>
+        <div class="step reveal d1">
+          <span class="step-num">2</span>
+          <h3>Copy &amp; paste</h3>
+          <p>Open ChatGPT, Claude, or Gemini — free versions work — and paste the file in.</p>
+        </div>
+        <div class="step-arrow reveal d2" aria-hidden="true">→</div>
+        <div class="step reveal d2">
+          <span class="step-num">3</span>
+          <h3>Just answer</h3>
+          <p>The AI asks the questions. You answer honestly. It does the writing and coaching.</p>
+        </div>
+      </div>
+      <p class="center note reveal d3"><strong>No tech skills needed.</strong> No subscription. No monthly fees. Use it again for every job you apply to, as many times as you want.</p>
+    </div>
+  </section>
+
+  <!-- ======= ABOUT ======= -->
+  <section class="about" id="about">
+    <div class="container about-grid">
+      <div class="about-portrait reveal" aria-hidden="true">
+        <div class="portrait-frame">
+          <svg viewBox="0 0 120 120" class="portrait-glyph">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+            <circle cx="60" cy="44" r="16" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M30 96 a30 30 0 0 1 60 0" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <p class="portrait-caption">Toni Powell<br><span>Founder, Dream Job Finder</span></p>
+        </div>
+      </div>
+      <div class="about-copy">
+        <p class="eyebrow reveal">The recruiter behind the vault</p>
+        <h2 class="reveal d1">She's read thousands of resumes.<br><em>These tools show you what gets a yes.</em></h2>
+        <p class="reveal d2">Toni Powell has spent <strong>20+ years inside HR, recruiting &amp; compensation</strong> — sitting on the other side of the desk in talent acquisition, reading the resumes, running the interviews, and deciding the offers. The Resume Vault and The Interview Room are her interview process, distilled into tools you run yourself, for less than the cost of lunch.</p>
+        <ul class="check-list reveal d3">
+          <li>Built by a 20-year HR insider in talent acquisition &amp; compensation</li>
+          <li>No subscription, no account with us, no client data collected</li>
+          <li>Unlimited reuse — every application, every interview</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======= PRICING ======= -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <p class="eyebrow center gold reveal">One-time price · No subscription</p>
+      <h2 class="center reveal d1">Less than lunch. Yours forever.</h2>
+      <div class="price-cards">
+        <div class="price-card reveal">
+          <p class="price-kicker">The Resume Vault · No. 01</p>
+          <h3>The Interactive<br>Resume Rewriter</h3>
+          <p class="price"><sup>$</sup>9<span>.99</span></p>
+          <p class="price-meta">one-time · instant download</p>
+          <a class="btn btn-gold btn-block" href="https://dream-job-finder.replit.app" target="_blank" rel="noopener">Get the Resume Rewriter</a>
+        </div>
+        <div class="price-card featured reveal d1">
+          <p class="badge">Most popular together</p>
+          <p class="price-kicker">Both tools</p>
+          <h3>Resume Rewriter +<br>Interview Coach</h3>
+          <p class="price"><sup>$</sup>19<span>.98</span></p>
+          <p class="price-meta">$9.99 each · one-time · instant download</p>
+          <a class="btn btn-gold btn-block" href="https://dream-job-finder.replit.app" target="_blank" rel="noopener">Get Both Tools Now</a>
+        </div>
+        <div class="price-card reveal d2">
+          <p class="price-kicker">The Interview Room · No. 01</p>
+          <h3>The Interactive<br>Interview Coach</h3>
+          <p class="price"><sup>$</sup>9<span>.99</span></p>
+          <p class="price-meta">one-time · instant download</p>
+          <a class="btn btn-gold btn-block" href="https://dream-job-finder.replit.app" target="_blank" rel="noopener">Get the Interview Coach</a>
+        </div>
+      </div>
+      <p class="center note reveal d3">or visit <a class="inline-link" href="https://dream-job-finder.replit.app" target="_blank" rel="noopener">dream-job-finder.replit.app</a></p>
+    </div>
+  </section>
+
+  <!-- ======= FOR AGENCIES ======= -->
+  <section class="agencies" id="agencies">
+    <div class="container narrow">
+      <p class="eyebrow center reveal">Partner resource for workforce agencies</p>
+      <h2 class="center reveal d1">Your clients walk in without a resume.<br><em>Give them a recruiter to walk out with.</em></h2>
+      <p class="center lede reveal d2">Staff don't have the hours to interview each client for their accomplishments and rewrite every document one-on-one — and when an interview finally lands, there's no one to practice with. A referral costs nothing: <strong>no cost, no contract, no data shared.</strong></p>
+      <div class="ref-steps">
+        <div class="ref-step reveal">
+          <p class="ref-num">i.</p>
+          <p><strong>Pin or hand out</strong> the one-page client flyer at your resource center, or forward it by email.</p>
+        </div>
+        <div class="ref-step reveal d1">
+          <p class="ref-num">ii.</p>
+          <p><strong>Clients who choose to</strong> purchase directly online — $9.99 per tool, instant download, no subscription.</p>
+        </div>
+        <div class="ref-step reveal d2">
+          <p class="ref-num">iii.</p>
+          <p><strong>They practice at home,</strong> as many times as they want, for every role — freeing staff time for case work.</p>
+        </div>
+      </div>
+      <div class="center reveal d3">
+        <a href="https://dream-job-finder.replit.app" target="_blank" rel="noopener" class="btn btn-outline btn-lg">Request the agency packet</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======= FAQ ======= -->
+  <section class="faq" id="faq">
+    <div class="container narrow">
+      <p class="eyebrow center reveal">Questions, answered</p>
+      <h2 class="center reveal d1">Frequently asked</h2>
+      <div class="faq-list reveal d2">
+        <details>
+          <summary>Do I need to pay for ChatGPT, Claude, or Gemini?</summary>
+          <p>No. Both tools are designed to work on the <strong>free tiers</strong> of ChatGPT, Claude, Gemini, and Copilot. You paste the file in and start answering questions.</p>
+        </details>
+        <details>
+          <summary>Is this a subscription?</summary>
+          <p>No. Each tool is a one-time $9.99 purchase with instant download. Use it again for every job you apply to, as many times as you want, forever.</p>
+        </details>
+        <details>
+          <summary>I'm not technical. Can I really use this?</summary>
+          <p>If you can copy and paste, you can use this. Step one is opening a free AI app; step two is pasting in the file. The AI takes it from there — it asks, you answer, it writes.</p>
+        </details>
+        <details>
+          <summary>What if I don't know my numbers or accomplishments?</summary>
+          <p>"I don't know" is a perfectly good answer. The Resume Rewriter is built to help you find your numbers through follow-up questions — that's the whole point of being interviewed instead of staring at a blank page.</p>
+        </details>
+        <details>
+          <summary>I have a gap in my work history. Will this handle it?</summary>
+          <p>Yes. The Resume Rewriter explains gaps in one calm, professional line, and the Interview Coach practices the gap question with you until your answer is steady.</p>
+        </details>
+        <details>
+          <summary>Do you collect my information?</summary>
+          <p>No account with us, no client data collected. Your conversation happens inside your own AI app — we never see it.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======= FINAL CTA ======= -->
+  <section class="final-cta">
+    <div class="container narrow center">
+      <h2 class="reveal">Your next application deserves<br><em>a recruiter on your side.</em></h2>
+      <p class="lede reveal d1">One-time price. No subscription. About 3 minutes to start.</p>
+      <a href="https://dream-job-finder.replit.app" target="_blank" rel="noopener" class="btn btn-gold btn-xl reveal d2">Get the Tools Now — $9.99</a>
+    </div>
+  </section>
+
+  <!-- ======= FOOTER ======= -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <p class="footer-brand">Dream Job Finder</p>
+        <p>Toni Powell · Founder<br>20+ years in HR, recruiting &amp; compensation</p>
+        <p><a class="inline-link" href="https://dream-job-finder.replit.app" target="_blank" rel="noopener">dream-job-finder.replit.app</a></p>
+      </div>
+      <div class="footer-links">
+        <a href="#tools">The Tools</a>
+        <a href="#how">How It Works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#agencies">For Agencies</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <p class="footer-legal">An independent training tool provided as an optional resource. Your local agency or career center does not receive payment and is not affiliated with this product. Dream Job Finder makes no guarantee of employment. Single-user license per purchase.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
