@@ -78,7 +78,85 @@ Do not hand all four documents to every drafting call. Route by the section's ex
 | Relief requested | Factual Report | Parent Response Questionnaire |
 
 Routing keeps each call focused and makes it obvious in the UI which upload is blocking
-which section.
+which section. Two qualifications:
+
+- **The Due-Process Rights Reference is available to every section**, not only the two rows
+  that name it. Legal framing runs through the whole claim.
+- **Routing is a default, not a cage.** If a section needs a fact the routed documents do
+  not contain, the agent may query the fact index (below) across all records rather than
+  emitting a placeholder. Placeholders are for facts that exist nowhere in the record.
+
+### Getting facts out of the records
+
+Routing alone is not enough. Handing a drafting call a 40-page Factual Report and expecting
+it to locate the three relevant paragraphs mid-draft is where facts get blurred, conflated,
+or quietly dropped. Extract first, then draft against the extraction.
+
+On upload of any RECORD or REFERENCE document, run a **fact-extraction pass** that decomposes
+it into atomic, individually-sourced units:
+
+```
+record_document
+  id, case_id, doc_type,            # detention_report | factual_report |
+                                    # parent_questionnaire | due_process_reference
+  filename, mime_type, storage_key,
+  raw_text, page_count, extract_status, extract_error, uploaded_at
+
+fact_atom
+  id, case_id, record_document_id,
+  fact_type,                        # person | date | location | agency | event |
+                                    # condition | statement | harm | legal_standard
+  text,                             # the assertion, in the record's own words where possible
+  verbatim_quote,                   # exact source language, when quotable
+  normalized_value,                 # ISO date, canonical facility name, etc.
+  page, paragraph, char_start, char_end,
+  entity_tags,                      # jsonb: who/what this fact attaches to
+  section_functions                 # jsonb: which rhetorical functions this fact serves
+```
+
+The extraction prompt:
+
+```
+Extract every discrete factual assertion from this case record as an atomic fact.
+
+For each: the assertion itself; the exact source language where it is quotable; a
+normalized value for dates, names, and places; its page and paragraph; and which
+sections of a legal claim it would support (chronology, conditions, harm, party
+identification, relief).
+
+Extract only what the document states. Do not infer, combine, or resolve
+contradictions between facts — if the record says two different things, extract both
+and flag the conflict. Where the record is vague ("sometime in the spring"), preserve
+the vagueness exactly rather than sharpening it.
+```
+
+The `parent_questionnaire` needs one special rule: it is a first-person account, and the
+parent's own language carries evidentiary weight a paraphrase does not. Preserve
+`verbatim_quote` on every fact drawn from it, and prefer quoting over summarizing when that
+fact reaches a draft.
+
+Pass 3 then receives **the fact atoms whose `section_functions` match the section being
+drafted**, plus the ability to query the full index — not four whole documents.
+
+### Provenance
+
+Every factual assertion in a generated draft carries a citation to the `fact_atom` that
+produced it: document, page, paragraph. Surface these in the drafting view as inline markers
+that expand to the source language, so the user can check any sentence against the record in
+one click.
+
+Provenance is also the real anti-fabrication mechanism. An instruction not to invent facts is
+a request; requiring every assertion to name a source atom is a constraint. Any sentence in a
+draft that asserts a fact with no atom behind it is flagged before the user ever sees it —
+treat an unsourced assertion the same way you treat expert-case fact bleed.
+
+### Cross-section consistency
+
+Facts asserted in section 3 must not contradict section 9 — a filed document with an internal
+date conflict is worse than one with a visible gap. Because every assertion resolves to a
+`fact_atom`, run a consistency check across all drafted sections: the same atom must
+normalize identically everywhere it appears, and conflicting atoms flagged at extraction must
+never both be asserted. Report conflicts on the Structure Map, not silently.
 
 ## 3. UI changes
 
@@ -250,7 +328,9 @@ Retrieval for the section at `order_index = N`:
    and **surface the re-mapping to the user** — never switch silently.
 4. Load the model section's full text **plus its immediate neighbors**, so transitions and
    back-references read correctly.
-5. Load only the record documents the §2 routing table assigns to this function.
+5. Load the `fact_atom` set whose `section_functions` include this section's function,
+   drawn from the records the §2 table routes here — plus a queryable handle on the full
+   fact index for anything else the section turns out to need.
 
 ```
 You are drafting section {N} of {TOTAL} of a new legal claim, titled
@@ -258,22 +338,31 @@ You are drafting section {N} of {TOTAL} of a new legal claim, titled
 
 MODEL (structure only): the corresponding section of a complaint filed in a different
 case, with its neighboring sections for context.
-RECORD (facts): {routed record documents}
-REFERENCE (law): {Due-Process Rights Reference, when routed}
+FACTS: atomic facts extracted from this case's record, each with its source document,
+page, and paragraph. You may query the full fact index for additional facts.
+REFERENCE (law): the Due-Process Rights Reference.
 
 Mirror the model's structure: paragraph count and ordering, the sequence in which
 elements are established, where and how authority is cited, sentence-level register,
 and approximate length.
 
-Replace every fact with the corresponding fact from the RECORD documents. Do not
-import any fact, name, date, place, condition, or holding from the model complaint's
-own record — it belongs to another family's case.
+Build every factual assertion from the FACTS provided. Each assertion you make must
+name the fact atom behind it — an assertion with no atom is not permitted, and will be
+rejected before the user sees it. Where a fact came from the Parent Response
+Questionnaire, prefer the parent's own words over your paraphrase.
 
-Where the RECORD does not supply a fact the structure calls for, insert a bracketed
-placeholder naming exactly what is needed and which document should contain it —
-for example [DATE OF TRANSFER — not in Detention Report]. Never invent, estimate,
+Do not import any fact, name, date, place, condition, or holding from the model
+complaint's own record. It belongs to another family's case.
+
+Where no atom supports a fact the structure calls for, first query the fact index in
+case it sits in an unrouted document. If it genuinely is not in the record, insert a
+bracketed placeholder naming exactly what is needed and which document should contain
+it — for example [DATE OF TRANSFER — not in Detention Report]. Never invent, estimate,
 infer, or approximate a fact. An incomplete draft with honest gaps is correct; a
 complete draft with invented facts is a serious failure.
+
+Preserve any vagueness the record carries. If the record says "sometime in the
+spring," the draft says so too — do not resolve it into a date.
 
 Mark every legal citation you carry over from the model with a verify flag. Structure
 may be borrowed; authority must be confirmed against this case's jurisdiction and
@@ -287,8 +376,9 @@ An expert complaint can run 60+ pages. Do not re-send it on every call.
 - Pass 1 reads the full document **once** and persists everything downstream needs.
 - Pass 2 sends only the section index (titles, functions, summaries) — never the body text.
 - Pass 3 sends only the mapped section plus its two neighbors, sliced by the stored
-  `char_start`/`char_end`.
-- Cache the record documents' extracted text; re-extract only on re-upload.
+  `char_start`/`char_end` — and **fact atoms, never whole record documents.** A section on
+  conditions of confinement should receive forty relevant atoms, not a forty-page report.
+- Fact extraction runs once per record document on upload; re-extract only on re-upload.
 - Run Pass 1 as a background job with the row status reflecting real progress. A 60-page
   parse should not block the UI.
 - If the Expert Claim exceeds the model's context window, chunk with overlap on detected
@@ -304,9 +394,12 @@ These are correctness requirements, not polish. Build them with the feature, not
    highlighted for the user. Borrowing structure from a filed complaint makes it very easy
    to also borrow the other family's facts, and that failure is both invisible in review and
    seriously damaging.
-2. **No fabrication.** Missing facts become bracketed placeholders and `needs_input` status.
-   Never a plausible-sounding invention. Surface placeholders as a visible checklist so gaps
-   get filled rather than overlooked.
+2. **No fabrication, enforced by provenance.** Every factual assertion in a draft resolves to
+   a `fact_atom` with a document, page, and paragraph. An unsourced assertion is flagged
+   before the user sees it — same severity as expert-case fact bleed. Facts genuinely absent
+   from the record become bracketed placeholders and `needs_input` status, surfaced as a
+   visible checklist so gaps get filled rather than overlooked. Never a plausible-sounding
+   invention.
 3. **Citations carry a verify flag.** Authority from the model informs structure but is not
    asserted in the new claim until the user confirms it.
 4. **Blocked states are explicit.** No Expert Claim → Section Drafter shows an empty state
@@ -322,6 +415,9 @@ These are correctness requirements, not polish. Build them with the feature, not
 POST   /api/cases/:caseId/model-document        upload; kicks off Pass 1
 GET    /api/cases/:caseId/model-document        status + section count
 DELETE /api/cases/:caseId/model-document        invalidates structure map
+POST   /api/cases/:caseId/records/:type         upload a record; kicks off fact extraction
+GET    /api/cases/:caseId/facts                 fact index; filter by function, type, doc
+GET    /api/cases/:caseId/facts/:id             single atom + source language
 GET    /api/cases/:caseId/structure-map         joined expert_section + case_section
 POST   /api/cases/:caseId/structure-map/titles  run/rerun Pass 2 (respects title_locked)
 PATCH  /api/cases/:caseId/sections/:id          edit title (sets title_locked)
@@ -336,12 +432,14 @@ GET    /api/cases/:caseId/sections/:id/model    model section text for side-by-s
    uploads.
 3. Pass 1 as a background job with live row status.
 4. Structure Map screen, read-only.
-5. Pass 2 + inline title editing and locking.
-6. Pass 3 with routed records and side-by-side model view.
-7. Fact-bleed check and placeholder checklist.
+5. Fact extraction over the record documents, with a browsable fact index.
+6. Pass 2 + inline title editing and locking.
+7. Pass 3 with routed fact atoms, provenance markers, and side-by-side model view.
+8. Fact-bleed check, unsourced-assertion check, placeholder checklist, consistency check.
 
-Ship 1–4 before starting 5 — the user must be able to see the extracted structure before
-any generated title or draft is worth trusting.
+Ship 1–4 before starting 6 — the user must be able to see the extracted structure before any
+generated title or draft is worth trusting. Step 5 can be built in parallel with 1–4; it
+touches different documents and is the prerequisite for 7, not for 6.
 
 ## 10. Acceptance criteria
 
@@ -360,6 +458,15 @@ any generated title or draft is worth trusting.
    titles.
 7. A 60-page Expert Claim parses without blocking the UI, and drafting a single section does
    not re-send the full document.
+8. Every factual assertion in a drafted section carries an inline citation to a fact atom
+   that expands to its source language — verified by a test asserting that a draft
+   containing an unsourced assertion is flagged rather than saved.
+9. Facts drawn from the Parent Response Questionnaire appear in the parent's own words where
+   the record supplies quotable language.
+10. Drafting a section receives fact atoms, not whole record documents — verified by
+    asserting the drafting call's payload excludes full document text.
+11. The same fact normalizes identically across every section that asserts it, and
+    contradictions flagged at extraction are never both asserted.
 
 ## 11. Out of scope
 
