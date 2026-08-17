@@ -1,202 +1,368 @@
-# Feature Prompt — Section Drafter: Whole-Document Expert Claim Mapping
+# Feature Prompt — Section Drafter: Whole-Document Expert Claim Mapping (v2)
 
-Paste the block below into Replit as a single feature request. Everything above the
-horizontal rule is context for us, not for Replit.
+**How to use this file:** everything below the horizontal rule is the prompt. Paste it into
+Replit Agent as one message. This preamble is notes for us, not for Replit.
 
-**What this changes, in one sentence:** instead of uploading a separate model snippet for
-every section, the user uploads the *entire* Expert Claim once, and the drafting agent
-mirrors that document's structure exactly while renaming every section to fit the new
-case's own facts.
-
----
-
-## FEATURE REQUEST: Expert Claim as a whole-document structural model
-
-### Background
-
-The Section Drafter currently expects a model sample to be uploaded per section ("UPLOAD
-MODEL" inside each section card). That is the wrong unit of work. The user works from a
-single filed complaint — the **Expert Claim** — and wants the new claim to follow that
-document's architecture end to end.
-
-Two things have to be true at the same time:
-
-1. **Structure matches the Expert Claim exactly.** Same number of sections, same order,
-   same nesting depth, same rhetorical job per section, comparable length and citation
-   density.
-2. **Section titles belong to the new case.** Titles are regenerated from the new case's
-   own record — the Factual Report and the Detention Report — so they name the new
-   claimant, facility, dates, and claim theories. The Expert Claim's proper nouns never
-   appear in the new claim.
-
-The agent must therefore analyze the *whole* Expert Claim and, for whatever section the
-user is drafting, locate the structurally corresponding section inside it — matching on
-function and position, not on title text, because the titles will deliberately differ.
+**What changed from v1:** literal prompt text for each agent pass (this feature's quality is
+almost entirely in those prompts, so they shouldn't be left to Replit to invent); a document
+taxonomy that distinguishes fact sources from legal-authority sources; a routing table so
+each section draws on the *right* record document instead of all of them; an explicit token
+strategy so the whole Expert Claim isn't re-sent on every draft call; concrete API surface
+and build order.
 
 ---
 
-### 1. Documents On File — add a Model Document slot
+# BUILD: Expert Claim as a whole-document structural model for the Section Drafter
 
-Replace the per-section "UPLOAD MODEL" affordance with one case-level upload.
+## 0. What you are building
 
-In the `DOCUMENTS ON FILE` panel, keep the existing rows and add a new row above them:
+Today the Section Drafter asks the user to upload a separate model snippet for each section
+(the `MODEL SAMPLE` card with "Upload a section from the filed complaint to use as a
+structural template"). Replace that entirely.
 
-| Badge | Label | Status |
+The user uploads **one** document — the full **Expert Claim**, a complaint already filed in
+a comparable case — and the app derives the whole architecture of the new claim from it. The
+new claim gets the same sections, in the same order, doing the same jobs, at the same depth.
+But every section is *titled and written for the new case*, using the new case's own record.
+
+When the user drafts section 7, the agent reads the entire Expert Claim, finds the section
+inside it that does section 7's job, and models the draft on that section alone.
+
+## 1. Read this before you design anything
+
+The hard part of this feature is a matching problem, and the obvious solution is wrong.
+
+Section titles in the new claim **will not match** the Expert Claim's titles. That is the
+point of the feature — the new titles come from a different family, a different facility,
+different dates, a different set of claim theories. So **you cannot map sections by title
+similarity, keyword overlap, or embedding distance between headings.** That approach will
+look like it works on the first test document and silently mis-map in production.
+
+Map on two properties that survive the rename:
+
+1. **Ordinal position** in the document.
+2. **Rhetorical function** — the job the section does in the argument (establish
+   jurisdiction, identify parties, lay the chronology, state the legal standard, apply
+   elements to facts, establish damages, request relief).
+
+Extract the rhetorical function once, at upload time, and store it. Match on it forever
+after. Position proposes; function verifies.
+
+## 2. Document taxonomy
+
+The `DOCUMENTS ON FILE` panel currently mixes two kinds of document behind two badge styles.
+Formalize three roles, because the agent must treat them differently:
+
+| Role | Badge | Documents | What the agent may take from it |
+|---|---|---|---|
+| **STRUCTURE** | `MODEL` (new) | Expert Claim Sample | Architecture, ordering, register, citation density, paragraph rhythm. **Never facts.** |
+| **RECORD** | `RECORD` (existing green) | Detention Report, Factual Report, Parent Response Questionnaire | Every fact, name, date, place, and quotation in the new claim. |
+| **REFERENCE** | `REFERENCE` (existing blue) | Due-Process Rights Reference | Legal standards, rights framework, authority the new claim asserts. |
+
+This taxonomy is the enforcement boundary for the fact-bleed guardrail in §7. A STRUCTURE
+document is a shape, not a source. Encode that as a hard rule, not a suggestion in a prompt.
+
+### Which record feeds which section
+
+Do not hand all four documents to every drafting call. Route by the section's extracted
+`rhetorical_function`:
+
+| Section function | Primary source | Secondary |
 |---|---|---|
-| `MODEL` | Expert Claim Sample | `missing` / `parsed` / `N sections` |
+| Party identification, jurisdiction, venue | Factual Report | Detention Report |
+| Chronological narrative, custody timeline | Detention Report | Factual Report |
+| Conditions of confinement, treatment | Detention Report | Parent Response Questionnaire |
+| Harm, trauma, family impact, damages | Parent Response Questionnaire | Factual Report |
+| Legal standard, rights framework | Due-Process Rights Reference | — |
+| Element-by-element application | Due-Process Rights Reference | Factual + Detention Report |
+| Relief requested | Factual Report | Parent Response Questionnaire |
 
-Behavior:
+Routing keeps each call focused and makes it obvious in the UI which upload is blocking
+which section.
 
-- Accepts PDF, DOCX, TXT (single file, up to 50 MB). One model document per case;
-  re-uploading replaces it and invalidates the derived structure map.
-- On upload, immediately run **Pass 1 (Structure Extraction)** below and show progress
-  inline on the row (`Parsing… → 14 sections found`).
-- The row is clickable and opens the **Structure Map** review screen (section 4).
-- The `MODEL SAMPLE` card that currently sits below `DOCUMENTS ON FILE` — the one that says
-  "Upload a section from the filed complaint to use as a structural template" — is removed.
-  Its per-section upload is superseded by this single upload.
-- Existing per-section model uploads, if any are already stored, remain readable but the
-  UI no longer offers new ones.
+## 3. UI changes
 
-The other four rows (`Detention Report`, `Factual Report`, `Parent Response Questionnaire`,
-`Due-Process Rights Reference`) keep their current badge styling and `missing` states.
+### 3a. `DOCUMENTS ON FILE` panel
 
-### 2. Data model
+Add one row **above** the existing four:
 
-Add three tables/collections:
+```
+[MODEL]  Expert Claim Sample          missing | parsing… | 14 sections
+```
+
+- Style the `MODEL` badge as a third variant, visually distinct from the green `RECORD` and
+  blue `REFERENCE` badges (suggest amber/neutral) — it is a different kind of thing.
+- Accepts PDF, DOCX, TXT. One per case. Max 50 MB.
+- On upload, run **Pass 1** immediately and show live progress on the row itself.
+- The row is clickable once parsed and opens the **Structure Map** (§3b).
+- Re-uploading replaces the model and invalidates the derived structure map — warn the user
+  first if any sections are already drafted, since their titles and mappings will be
+  regenerated.
+
+**Delete the `MODEL SAMPLE` card** below the panel, along with its `UPLOAD MODEL` action and
+the per-section upload control on each Section Drafter card. If any per-section model
+uploads already exist in the database, keep them readable but stop offering new ones and
+show a one-time notice that the model is now set at the case level.
+
+### 3b. Structure Map screen (new)
+
+A verification step between "model uploaded" and "start drafting." The user should never
+draft fourteen sections on top of a mapping they never saw.
+
+Two-column table, one row per section:
+
+```
+#   EXPERT CLAIM (model)                 YOUR CLAIM (generated)              STATUS
+1   "I. PRELIMINARY STATEMENT"           "I. Preliminary Statement"          mapped
+2   "II. JURISDICTION AND VENUE"         "II. Jurisdiction and Venue"        mapped
+3   "III. THE SEPARATION OF J.M. …"      "III. The Separation of [child] …"  needs input
+```
+
+Each row expands to show: the model section's function summary, the rationale for the
+generated title, and which record document supplied it. Titles are editable inline; an
+edited title is marked **user-locked** and survives regeneration. Every row links straight
+into drafting that section. A `Regenerate titles` action reruns Pass 2 after new records are
+uploaded, preserving locked titles.
+
+### 3c. Section Drafter cards
+
+Each card shows:
+- the generated title for the new case (not the expert's),
+- a reference line: `Modeled on §{n} of Expert Claim — "{source_title}"`, expandable into a
+  side-by-side view of the model section next to the working draft,
+- the status chip,
+- a checklist of any bracketed placeholders the draft is waiting on, each naming the
+  specific missing fact and which document should supply it.
+
+## 4. Data model
 
 ```
 model_document
   id, case_id, filename, mime_type, storage_key,
-  raw_text, page_count, uploaded_at, parse_status, parse_error
+  raw_text, page_count, uploaded_at,
+  parse_status,            # pending | parsing | parsed | failed
+  parse_error,
+  proper_noun_index        # jsonb: names, places, dates, docket ids extracted from the
+                           # expert claim — used by the fact-bleed check in §7
 
-expert_section            # one row per section found in the Expert Claim
+expert_section             # one row per section found in the Expert Claim
   id, model_document_id, order_index, heading_level,
-  source_title,           # verbatim heading from the Expert Claim
+  source_title,            # verbatim heading from the Expert Claim
   char_start, char_end, page_start, page_end,
-  rhetorical_function,    # e.g. "jurisdictional basis", "party identification",
-                          #      "chronological fact narrative", "legal standard",
-                          #      "element-by-element application", "damages", "relief"
-  legal_elements[],       # what this section must establish to do its job
-  evidence_types[],       # e.g. ["intake records","witness declaration","policy citation"]
-  word_count, citation_count, tone_notes
+  rhetorical_function,     # controlled vocabulary — see §2 routing table
+  function_summary,        # fact-agnostic: what job this section does
+  legal_elements,          # jsonb array: what it must establish
+  evidence_types,          # jsonb array: what kinds of proof it leans on
+  word_count, paragraph_count, citation_count, tone_notes
 
-case_section              # 1:1 with expert_section, same order_index
+case_section               # 1:1 with expert_section, same order_index
   id, case_id, expert_section_id, order_index,
-  drafted_title,          # generated from the new case's record
-  title_rationale,        # why this title, which source facts drove it
-  status,                 # not_started | mapped | drafting | drafted | needs_input
-  draft_body, last_drafted_at
+  drafted_title,
+  title_rationale,
+  title_locked,            # bool — user edited it; Pass 2 must not overwrite
+  source_documents,        # jsonb: which records fed this section
+  status,                  # not_started | mapped | drafting | drafted | needs_input | blocked
+  draft_body, placeholders, last_drafted_at
 ```
 
-Invariant to enforce in code and in a test: `count(case_section) == count(expert_section)`
-and the `order_index` sequences are identical. The user may edit a `drafted_title` or
-reorder, but any deviation from the Expert Claim's structure is surfaced as a warning
-banner ("Structure no longer matches model: 13 of 14 sections").
+**Invariant, enforced in code and covered by a test:**
+`count(case_section) == count(expert_section)`, with identical `order_index` sequences and
+`heading_level` values. If a user action breaks parity, show a persistent banner
+(`Structure no longer matches model — 13 of 14 sections`) with a one-click repair.
 
-### 3. Three-pass agent design
+## 5. The three passes
 
-**Pass 1 — Structure Extraction.** Runs once, on Expert Claim upload. Input: the full
-Expert Claim text. Output: the ordered `expert_section` rows above. Detect headings by
-numbering scheme, typography, and semantic breaks — do not rely on a single regex, filed
-complaints number sections inconsistently. For each section, summarize *what job it does
-in the argument*, not what it says about the expert case's facts. This summary is the
-matching key later, so it must be fact-agnostic and portable.
+Use a long-context model for Pass 1. The prompts below are the deliverable — implement them
+close to verbatim rather than paraphrasing.
 
-**Pass 2 — Title Mapping.** Runs after Pass 1 completes and whenever the Factual Report or
-Detention Report changes. Input: all `expert_section` rows + the new case's Factual Report
-and Detention Report. Output: a `drafted_title` for every section, in order.
+### Pass 1 — Structure Extraction (once, on upload)
 
-Rules for generated titles:
-- Preserve the section's rhetorical function and its position in the argument.
-- Use the new case's parties, facility, agency, dates, and claim theories — pulled from the
-  Factual Report and Detention Report only.
-- Never carry over a proper noun, docket number, date, or case-specific phrase from the
-  Expert Claim.
-- Match the Expert Claim's *heading conventions* (numbering style, capitalization, whether
-  headings are assertions or labels) even while the words change.
-- If the new case's record contains no facts supporting a section's function, still create
-  the section (structure must match) but title it neutrally and set
-  `status = needs_input` with a note naming the missing fact.
+Input: full Expert Claim text. Output: the ordered `expert_section` rows.
 
-**Pass 3 — Section Drafting.** Runs per section, on demand, when the user opens a section
-in the Section Drafter. This is the pass that must read the whole Expert Claim.
+Parse headings by numbering scheme, typography, *and* semantic breaks together — filed
+complaints number inconsistently, and a single regex will fail on roman numerals mixed with
+lettered subparts. Where detection is ambiguous, prefer more sections over fewer; the user
+can merge in the Structure Map.
 
-Retrieval for a section with `order_index = N`:
-1. Load the full Expert Claim text.
-2. Select the mapped `expert_section` by `order_index`, then *verify* the mapping by
-   comparing the section's `rhetorical_function` and `legal_elements` against what the
-   current section is supposed to accomplish. Do not match on title similarity — titles
-   diverge by design.
-3. If verification fails (the mapped section does not do the job the current section
-   needs), search the whole document for the section whose function best matches, and
-   surface the re-mapping to the user rather than silently switching.
-4. Pass the model section's full text **plus the preceding and following section** as
-   context, so transitions and cross-references read correctly.
+```
+You are analyzing a filed legal complaint that will be used ONLY as a structural template
+for a different case. Do not summarize its facts.
 
-Drafting instruction to the model, per section:
+For each section, return:
+  order_index, heading_level, source_title (verbatim),
+  char_start, char_end,
+  rhetorical_function — one of: preliminary_statement, jurisdiction_venue,
+    party_identification, factual_chronology, conditions_of_confinement,
+    legal_standard, element_application, harm_and_damages, relief_requested, other
+  function_summary — 1-2 sentences describing WHAT JOB this section does in the
+    argument, written so it would apply equally to any case using this structure.
+    Name no party, place, date, or case-specific fact.
+  legal_elements — what this section must establish for the complaint to succeed
+  evidence_types — the kinds of proof it relies on
+  word_count, paragraph_count, citation_count
+  tone_notes — register, whether headings are assertions or labels, numbering
+    convention, how authority is cited and where it sits in the paragraph
 
-> You are drafting section {N} of {TOTAL}, titled "{drafted_title}", for the new claim.
-> The corresponding section of the Expert Claim is provided in full, along with its
-> neighbors. Mirror its structure: paragraph count and ordering, the sequence in which
-> elements are established, how authority is cited and where, sentence-level register, and
-> approximate length. Replace every fact with the corresponding fact from the new case's
-> Factual Report and Detention Report. Do not import any fact, name, date, place, or
-> holding from the Expert Claim's own record. Where the new case's record does not supply
-> a fact the structure calls for, insert a bracketed placeholder naming exactly what is
-> needed — never invent, estimate, or infer a fact.
+function_summary is the matching key used later against a different case. If it
+mentions anything specific to THIS case, it is wrong — rewrite it.
+```
 
-### 4. Structure Map screen
+### Pass 2 — Title Mapping (after Pass 1; rerun when records change)
 
-Clicking the `MODEL` row opens a two-column review table so the user can verify the
-mapping before drafting anything:
+Input: all `expert_section` rows + Factual Report + Detention Report. Output: a
+`drafted_title` and `title_rationale` for every section, in order.
 
-| # | Expert Claim section (model) | Your claim section (generated) | Status |
-|---|---|---|---|
-| 1 | *verbatim expert heading* | *generated title* | mapped |
-| 2 | … | … | needs input |
+```
+You are titling the sections of a new legal claim. The section STRUCTURE is fixed and
+comes from a model complaint filed in a different case. Your job is to give each
+section a title that belongs to THIS case.
 
-Per row: expand to see the expert section's function summary and the rationale for the
-generated title; edit the generated title inline; jump straight to drafting that section.
-A "Regenerate titles" action reruns Pass 2 after new documents are uploaded, preserving any
-titles the user has manually edited (flag them as user-locked).
+For each section you receive its position, its rhetorical function, its function
+summary, and the model's verbatim heading (for CONVENTION ONLY — numbering style,
+capitalization, whether headings are assertions or bare labels).
 
-### 5. Section Drafter card changes
+Rules:
+1. Preserve the section's function and its position in the argument.
+2. Draw every specific term — parties, child, facility, agency, dates, claim
+   theories — from the new case's Factual Report and Detention Report below.
+3. Never carry a proper noun, date, docket number, or case-specific phrase from the
+   model complaint into a title. Not one.
+4. Match the model's heading conventions exactly while changing the words.
+5. If the new case's record contains nothing supporting a section's function, still
+   produce the section — structure parity is mandatory — but give it a neutral
+   functional title, set status to needs_input, and name the exact missing fact and
+   which document should contain it.
 
-Each section card in the Section Drafter shows:
-- the generated title (the new case's title, not the expert's),
-- a subtle reference line: `Modeled on §{order_index} of Expert Claim — "{source_title}"`,
-  which expands to show that model section's text side by side with the draft,
-- the section's status chip, and any bracketed placeholders surfaced as a checklist of
-  missing facts.
+Return for each: drafted_title, title_rationale (which source facts drove it, citing
+the document), status, missing_facts[].
+```
 
-Remove the per-section upload control entirely.
+### Pass 3 — Section Drafting (per section, on demand)
 
-### 6. Guardrails
+This is the pass that reasons over the whole Expert Claim.
 
-- **No fact bleed.** After each section drafts, run a check against the Expert Claim's
-  extracted proper nouns, dates, and docket identifiers; flag any that appear in the new
-  draft and block save until cleared. This is the single most important correctness
-  property of the feature.
-- **No fabrication.** Missing facts become bracketed placeholders and `needs_input`, never
-  invented content.
-- **Citations are not copied as authority.** Legal citations from the Expert Claim may
-  inform structure, but each carries a `verify` flag in the new draft until the user
-  confirms it applies to the new case's jurisdiction and facts.
-- **Blocked states.** If the Expert Claim is missing, the Section Drafter shows an empty
-  state pointing to the upload. If the Factual Report and Detention Report are both
-  missing, Pass 2 cannot run — say so explicitly rather than generating generic titles.
+Retrieval for the section at `order_index = N`:
 
-### 7. Acceptance criteria
+1. Select the mapped `expert_section` by `order_index`.
+2. **Verify** the mapping: compare that section's `rhetorical_function` and
+   `legal_elements` against what section N needs to accomplish. Do not compare titles.
+3. If verification fails, search all `expert_section` rows for the best functional match,
+   and **surface the re-mapping to the user** — never switch silently.
+4. Load the model section's full text **plus its immediate neighbors**, so transitions and
+   back-references read correctly.
+5. Load only the record documents the §2 routing table assigns to this function.
 
-1. Uploading one Expert Claim produces a section-for-section structure map with no further
-   uploads required.
+```
+You are drafting section {N} of {TOTAL} of a new legal claim, titled
+"{drafted_title}".
+
+MODEL (structure only): the corresponding section of a complaint filed in a different
+case, with its neighboring sections for context.
+RECORD (facts): {routed record documents}
+REFERENCE (law): {Due-Process Rights Reference, when routed}
+
+Mirror the model's structure: paragraph count and ordering, the sequence in which
+elements are established, where and how authority is cited, sentence-level register,
+and approximate length.
+
+Replace every fact with the corresponding fact from the RECORD documents. Do not
+import any fact, name, date, place, condition, or holding from the model complaint's
+own record — it belongs to another family's case.
+
+Where the RECORD does not supply a fact the structure calls for, insert a bracketed
+placeholder naming exactly what is needed and which document should contain it —
+for example [DATE OF TRANSFER — not in Detention Report]. Never invent, estimate,
+infer, or approximate a fact. An incomplete draft with honest gaps is correct; a
+complete draft with invented facts is a serious failure.
+
+Mark every legal citation you carry over from the model with a verify flag. Structure
+may be borrowed; authority must be confirmed against this case's jurisdiction and
+facts before it can stand.
+```
+
+## 6. Token and performance strategy
+
+An expert complaint can run 60+ pages. Do not re-send it on every call.
+
+- Pass 1 reads the full document **once** and persists everything downstream needs.
+- Pass 2 sends only the section index (titles, functions, summaries) — never the body text.
+- Pass 3 sends only the mapped section plus its two neighbors, sliced by the stored
+  `char_start`/`char_end`.
+- Cache the record documents' extracted text; re-extract only on re-upload.
+- Run Pass 1 as a background job with the row status reflecting real progress. A 60-page
+  parse should not block the UI.
+- If the Expert Claim exceeds the model's context window, chunk with overlap on detected
+  heading boundaries and stitch the section index — never truncate silently.
+
+## 7. Guardrails
+
+These are correctness requirements, not polish. Build them with the feature, not after.
+
+1. **Fact-bleed check — the single most important property here.** After each section
+   drafts, scan the output against `model_document.proper_noun_index`. Any expert-case name,
+   place, date, or docket number appearing in the new draft blocks the save and is
+   highlighted for the user. Borrowing structure from a filed complaint makes it very easy
+   to also borrow the other family's facts, and that failure is both invisible in review and
+   seriously damaging.
+2. **No fabrication.** Missing facts become bracketed placeholders and `needs_input` status.
+   Never a plausible-sounding invention. Surface placeholders as a visible checklist so gaps
+   get filled rather than overlooked.
+3. **Citations carry a verify flag.** Authority from the model informs structure but is not
+   asserted in the new claim until the user confirms it.
+4. **Blocked states are explicit.** No Expert Claim → Section Drafter shows an empty state
+   pointing at the upload. No Factual Report and no Detention Report → Pass 2 cannot run;
+   say exactly that instead of generating generic titles. A section whose routed record is
+   missing → `blocked`, naming the document it needs.
+5. **This tool assists a person preparing their own claim.** Where the drafter is uncertain,
+   it flags for human review rather than resolving on its own.
+
+## 8. API surface
+
+```
+POST   /api/cases/:caseId/model-document        upload; kicks off Pass 1
+GET    /api/cases/:caseId/model-document        status + section count
+DELETE /api/cases/:caseId/model-document        invalidates structure map
+GET    /api/cases/:caseId/structure-map         joined expert_section + case_section
+POST   /api/cases/:caseId/structure-map/titles  run/rerun Pass 2 (respects title_locked)
+PATCH  /api/cases/:caseId/sections/:id          edit title (sets title_locked)
+POST   /api/cases/:caseId/sections/:id/draft    run Pass 3
+GET    /api/cases/:caseId/sections/:id/model    model section text for side-by-side
+```
+
+## 9. Build order
+
+1. Schema + migrations, with the parity invariant and its test.
+2. Model upload row in `DOCUMENTS ON FILE`; remove the `MODEL SAMPLE` card and per-section
+   uploads.
+3. Pass 1 as a background job with live row status.
+4. Structure Map screen, read-only.
+5. Pass 2 + inline title editing and locking.
+6. Pass 3 with routed records and side-by-side model view.
+7. Fact-bleed check and placeholder checklist.
+
+Ship 1–4 before starting 5 — the user must be able to see the extracted structure before
+any generated title or draft is worth trusting.
+
+## 10. Acceptance criteria
+
+1. One Expert Claim upload produces a complete section-for-section structure map. No further
+   uploads are needed to begin drafting.
 2. Generated section count, order, and nesting match the Expert Claim exactly.
-3. Every generated title reflects the new case's facts; no Expert Claim proper noun appears
-   in any title or draft body.
-4. Drafting section N retrieves and cites the structurally corresponding Expert Claim
-   section, verified by function rather than by title text.
-5. Sections unsupported by the new case's record are still created, marked `needs_input`,
-   and list the specific missing facts.
-6. Replacing the Expert Claim invalidates and regenerates the structure map, keeping
-   user-locked titles.
+3. Every generated title reflects the new case's facts. No expert-case proper noun appears
+   in any title or draft body — verified by the fact-bleed check, with a test that plants an
+   expert-case name in a draft and asserts the save is blocked.
+4. Drafting section N retrieves the structurally corresponding model section, matched by
+   function rather than title text — verified by a test in which the new case's titles are
+   deliberately unlike the model's.
+5. Sections unsupported by the record are still created, marked `needs_input`, and list the
+   specific missing facts and their source documents.
+6. Replacing the Expert Claim regenerates the structure map while preserving user-locked
+   titles.
+7. A 60-page Expert Claim parses without blocking the UI, and drafting a single section does
+   not re-send the full document.
+
+## 11. Out of scope
+
+Multi-model blending (only one Expert Claim per case), automatic filing or export formatting,
+and any change to how the four existing record documents are uploaded or displayed beyond the
+badge taxonomy in §2.
