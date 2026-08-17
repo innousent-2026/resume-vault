@@ -202,15 +202,44 @@ edited title is marked **user-locked** and survives regeneration. Every row link
 into drafting that section. A `Regenerate titles` action reruns Pass 2 after new records are
 uploaded, preserving locked titles.
 
-### 3c. Section Drafter cards
+### 3c. Section Drafter cards — and the button that is the whole point of this feature
+
+**The core interaction: every section card has a primary action button that writes that
+section.** Label it `WRITE THIS SECTION` (`REWRITE` once a draft exists). One click, no
+configuration, no per-section uploads, no prompt to compose. This button is the feature —
+build the card around it.
 
 Each card shows:
 - the generated title for the new case (not the expert's),
+- the `WRITE THIS SECTION` button as the card's primary action,
 - a reference line: `Modeled on §{n} of Expert Claim — "{source_title}"`, expandable into a
   side-by-side view of the model section next to the working draft,
 - the status chip,
 - a checklist of any bracketed placeholders the draft is waiting on, each naming the
   specific missing fact and which document should supply it.
+
+**Button states:**
+
+| State | Button | Card |
+|---|---|---|
+| Records + model on file | `WRITE THIS SECTION`, enabled | — |
+| Running | `WRITING…` with live phase text | streams the draft in as it is written |
+| Draft exists, untouched | `REWRITE` | draft shown with provenance markers |
+| Draft exists, user-edited | `REWRITE` | confirm first — see below |
+| Model missing | disabled | "Upload the Expert Claim Sample to enable drafting" |
+| Routed record missing | disabled | names the missing document specifically |
+
+Drafting a section takes tens of seconds. Stream the output into the card as it generates,
+and show the phase in the button (`Reading the Expert Claim…` → `Gathering facts…` →
+`Writing…`) so the wait is legible rather than a spinner.
+
+**Rewrite semantics.** If the user has edited a draft by hand, `REWRITE` must confirm before
+overwriting and must preserve the prior version — keep a per-section version history with
+one-click restore. Never silently discard a user's writing.
+
+Also provide a `Write all sections` action on the Structure Map that runs the sections in
+order, so the user can generate a full first draft and then work through it — but the
+per-section button remains the primary path.
 
 ## 4. Data model
 
@@ -315,11 +344,13 @@ Return for each: drafted_title, title_rationale (which source facts drove it, ci
 the document), status, missing_facts[].
 ```
 
-### Pass 3 — Section Drafting (per section, on demand)
+### Pass 3 — Section Drafting (per section, fired by the button)
 
-This is the pass that reasons over the whole Expert Claim.
+This is what `WRITE THIS SECTION` runs, and it is two steps, not one. The agent must work
+out *what this section needs* before it goes looking for facts — otherwise retrieval is a
+guess and the draft inherits whatever the guess missed.
 
-Retrieval for the section at `order_index = N`:
+**Step A — locate the model section.**
 
 1. Select the mapped `expert_section` by `order_index`.
 2. **Verify** the mapping: compare that section's `rhetorical_function` and
@@ -328,9 +359,51 @@ Retrieval for the section at `order_index = N`:
    and **surface the re-mapping to the user** — never switch silently.
 4. Load the model section's full text **plus its immediate neighbors**, so transitions and
    back-references read correctly.
-5. Load the `fact_atom` set whose `section_functions` include this section's function,
-   drawn from the records the §2 table routes here — plus a queryable handle on the full
-   fact index for anything else the section turns out to need.
+
+**Step B — derive a fact requirements checklist, then satisfy it.**
+
+Before writing a word, the agent reads the model section and produces an explicit list of
+what this section must establish for the new case. Then each requirement is resolved against
+the fact index by targeted query — not by hoping the right atoms were pre-tagged.
+
+```
+Below is one section of a complaint filed in a different case. It is the structural
+model for the section now being drafted.
+
+Read it and list what this section must ESTABLISH — not what it says. For each
+requirement: what fact or showing is needed, why the section needs it, and what kind
+of record document would ordinarily contain it.
+
+Describe requirements generically, in terms that transfer to any case using this
+structure. "The claimant's relationship to the detained child" is a requirement.
+"That Ms. R. is J.M.'s mother" is not — that is the model's own case, and it is not
+the case being drafted.
+```
+
+Each requirement is then resolved against the fact index (`GET /api/cases/:id/facts`),
+querying across **all** record documents, with the §2 routing table ordering which to search
+first rather than limiting what is reachable. Each requirement ends up in one of three
+states: **satisfied** (atoms found), **partial** (some atoms, gaps named), or **unmet** (no
+atom anywhere in the record).
+
+Show this checklist in the card as the draft generates. It is the most useful thing on
+screen — it tells the user exactly which document to go find, and it is why a section comes
+back marked `needs_input` rather than quietly short.
+
+**Worked example — "Parties and Background."** The user clicks `WRITE THIS SECTION`. The
+agent locates §III of the Expert Claim, whose function is `party_identification`. It derives
+requirements: identify the claimant and their standing; identify the detained child and the
+relationship; identify the responsible agency and facility; establish the custody period;
+establish residence and jurisdictional ties. It then queries the fact index for each:
+claimant identity and relationship resolve from the **Factual Report**; agency, facility, and
+custody dates from the **Detention Report**; the parent's account of the relationship and
+separation from the **Parent Response Questionnaire**; the standing framework from the
+**Due-Process Rights Reference**. Every requirement satisfied gets drafted in the model's
+paragraph order and register, each sentence carrying its source citation. Anything unmet —
+say the exact transfer date is nowhere in the record — becomes a bracketed placeholder and
+sets the section to `needs_input`.
+
+**Step C — draft.**
 
 ```
 You are drafting section {N} of {TOTAL} of a new legal claim, titled
@@ -338,9 +411,15 @@ You are drafting section {N} of {TOTAL} of a new legal claim, titled
 
 MODEL (structure only): the corresponding section of a complaint filed in a different
 case, with its neighboring sections for context.
-FACTS: atomic facts extracted from this case's record, each with its source document,
-page, and paragraph. You may query the full fact index for additional facts.
+REQUIREMENTS: what this section must establish, derived in Step B, each marked
+satisfied, partial, or unmet.
+FACTS: the atoms resolved against those requirements, each with its source document,
+page, and paragraph. You may query the full fact index for anything further.
 REFERENCE (law): the Due-Process Rights Reference.
+
+Work through the requirements in the order the model establishes them. Every
+requirement marked satisfied must be addressed in the draft; every requirement marked
+unmet becomes a bracketed placeholder in the position the model would have put it.
 
 Mirror the model's structure: paragraph count and ordering, the sequence in which
 elements are established, where and how authority is cited, sentence-level register,
@@ -421,8 +500,11 @@ GET    /api/cases/:caseId/facts/:id             single atom + source language
 GET    /api/cases/:caseId/structure-map         joined expert_section + case_section
 POST   /api/cases/:caseId/structure-map/titles  run/rerun Pass 2 (respects title_locked)
 PATCH  /api/cases/:caseId/sections/:id          edit title (sets title_locked)
-POST   /api/cases/:caseId/sections/:id/draft    run Pass 3
+POST   /api/cases/:caseId/sections/:id/draft    run Pass 3; streams; what the button calls
+GET    /api/cases/:caseId/sections/:id/requirements   Step B checklist + resolution state
 GET    /api/cases/:caseId/sections/:id/model    model section text for side-by-side
+GET    /api/cases/:caseId/sections/:id/versions  draft history for restore-after-rewrite
+POST   /api/cases/:caseId/draft-all             run every section in order
 ```
 
 ## 9. Build order
@@ -467,6 +549,16 @@ touches different documents and is the prerequisite for 7, not for 6.
     asserting the drafting call's payload excludes full document text.
 11. The same fact normalizes identically across every section that asserts it, and
     contradictions flagged at extraction are never both asserted.
+12. **The primary flow works end to end in one click.** With the Expert Claim and the four
+    record documents on file, opening any section — "Parties and Background," say — and
+    pressing `WRITE THIS SECTION` produces a drafted section that follows the model's
+    structure, states this case's facts, cites each to its source document and page, and
+    lists any facts the record does not contain. No further configuration, uploads, or
+    prompt-writing by the user.
+13. The requirements checklist is visible during and after drafting, and each item shows
+    whether it was satisfied, partially satisfied, or unmet.
+14. `REWRITE` on a hand-edited draft confirms before overwriting, and the prior version is
+    restorable.
 
 ## 11. Out of scope
 
