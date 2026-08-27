@@ -228,7 +228,8 @@ def choose_option(value, options: list) -> str | None:
 
 
 def analyze_form(fields: list[dict], values: dict, url: str = "",
-                 learned: dict[str, str] | None = None, include_sensitive: bool = False) -> dict:
+                 learned: dict[str, str] | None = None, include_sensitive: bool = False,
+                 unavailable: dict[str, str] | None = None) -> dict:
     """Map every field on a page and decide what (if anything) to type into it."""
     ats = detect_ats(url)
     plan, skipped = [], []
@@ -260,7 +261,8 @@ def analyze_form(fields: list[dict], values: dict, url: str = "",
 
         value = values.get(canonical)
         if value in (None, ""):
-            skipped.append({**entry, "skip_reason": f"nothing in your resume for '{canonical}'"})
+            reason = (unavailable or {}).get(canonical) or f"nothing in your resume for '{canonical}'"
+            skipped.append({**entry, "skip_reason": reason})
             continue
 
         options = field.get("options") or []

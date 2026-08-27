@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root { color-scheme: light; }
+      body {
+        width: 320px; margin: 0; padding: 14px;
+        font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #0f172a; background: #fff;
+      }
+      h1 { font-size: 14px; margin: 0 0 10px; }
+      .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+      .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 6px 0; }
+      .muted { color: #64748b; font-size: 12px; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #cbd5e1; }
+      .dot.ok { background: #16a34a; }
+      .dot.bad { background: #dc2626; }
+      button.primary {
+        width: 100%; background: #2563eb; color: #fff; border: 0; padding: 9px;
+        border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;
+      }
+      button.primary:disabled { background: #cbd5e1; cursor: default; }
+      input[type="text"] { width: 100%; box-sizing: border-box; padding: 6px 8px;
+        border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; font-size: 12px; }
+      ul { list-style: none; margin: 6px 0 0; padding: 0; max-height: 150px; overflow-y: auto; }
+      li { padding: 5px 0; border-top: 1px solid #f1f5f9; font-size: 12px; }
+      li .co { font-weight: 600; }
+      a { color: #2563eb; }
+      .note { font-size: 11px; color: #64748b; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Job Application Autofill</h1>
+
+    <div class="card">
+      <div class="row">
+        <span><span class="dot" id="status-dot"></span> <span id="status-text">Checking…</span></span>
+        <a href="#" id="open-dashboard">Dashboard</a>
+      </div>
+      <div class="muted" id="resume-line">—</div>
+    </div>
+
+    <button class="primary" id="scan">Scan this page</button>
+    <div class="muted" id="scan-result" style="margin-top:6px;"></div>
+
+    <div class="card" style="margin-top:10px;">
+      <label class="row"><span>Quick apply (fill confident fields on load)</span>
+        <input type="checkbox" id="quick-apply" /></label>
+      <label class="row"><span>Scan pages automatically</span>
+        <input type="checkbox" id="auto-scan" /></label>
+      <label class="row"><span>Answer EEO questions from my resume</span>
+        <input type="checkbox" id="eeo" /></label>
+      <div class="note">Autofill never clicks Submit — you review the page and submit it yourself.</div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Backend URL</div>
+      <div class="row">
+        <input type="text" id="api-base" placeholder="http://127.0.0.1:5057" />
+      </div>
+      <button class="primary" id="save-api" style="font-size:12px;padding:6px;">Save</button>
+    </div>
+
+    <div class="card">
+      <div class="muted">Recent applications</div>
+      <ul id="recent"><li class="muted">Nothing logged yet.</li></ul>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

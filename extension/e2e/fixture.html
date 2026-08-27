@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Acme Corp — Apply: Director of People Operations</title></head>
+<body>
+<h1>Apply for Director of People Operations</h1>
+<form id="application">
+  <label for="fn">First Name *</label><input id="fn" name="first_name" required>
+  <label for="ln">Last Name *</label><input id="ln" name="last_name" required>
+  <label for="em">Email</label><input id="em" name="email" type="email" autocomplete="email">
+  <label for="ph">Mobile phone</label><input id="ph" name="phone_number">
+  <label for="li">LinkedIn Profile</label><input id="li" name="urls[LinkedIn]">
+  <label for="city">City</label><input id="city" name="candidate_city">
+  <label for="auth">Are you legally authorized to work in the United States?</label>
+  <select id="auth" name="q_auth"><option value="">Select…</option><option value="1">Yes</option><option value="0">No</option></select>
+  <label for="spon">Will you now or in the future require visa sponsorship?</label>
+  <select id="spon" name="q_spon"><option value="">Select…</option><option value="1">Yes</option><option value="0">No</option></select>
+  <label for="gender">Gender</label>
+  <select id="gender" name="eeo_gender"><option value="">Select…</option><option value="m">Male</option><option value="d">Decline to self-identify</option></select>
+  <label for="resume">Resume/CV</label><input id="resume" name="resume" type="file">
+  <label for="sig">Electronic Signature</label><input id="sig" name="signature">
+  <label for="mystery">Question 7</label><input id="mystery" name="cand_q_0007712">
+  <label for="cover">Cover letter</label><textarea id="cover" name="cover_letter"></textarea>
+  <button type="submit" id="submit-btn">Submit Application</button>
+</form>
+<script>
+  document.getElementById('application').addEventListener('submit', (e) => {
+    e.preventDefault();
+    window.__submitted = (window.__submitted || 0) + 1;
+  });
+</script>
+</body></html>

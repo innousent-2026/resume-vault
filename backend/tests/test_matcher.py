@@ -69,3 +69,15 @@ def test_tfidf_cosine_is_symmetric_and_bounded():
     a, b = index.vector("people operations workday"), index.vector("workday people operations")
     assert 0.99 <= TfidfIndex.cosine(a, b) <= 1.0
     assert TfidfIndex.cosine(a, index.vector("line cook kitchen")) < 0.2
+
+
+def test_cover_letter_rendering_rules():
+    from resume import render_cover_letter
+    template = "Dear {company}, re: {title}."
+    assert render_cover_letter(template, {"company": "Acme", "title": "Head of Talent"}) == \
+        "Dear Acme, re: Head of Talent."
+    # A missing placeholder must produce nothing rather than a half-filled letter.
+    assert render_cover_letter(template, {"company": "Acme"}) is None
+    assert render_cover_letter(template, {"company": "Acme", "title": ""}) is None
+    assert render_cover_letter("", {"company": "Acme"}) is None
+    assert render_cover_letter("No placeholders here.", {}) == "No placeholders here."

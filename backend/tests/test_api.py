@@ -152,3 +152,34 @@ def test_scrape_requires_sources(client):
     resp = client.post("/api/scrape", json={})
     assert resp.status_code == 400
     assert "no enabled sources" in resp.get_json()["error"]
+
+
+def test_cover_letter_renders_for_a_known_job(client, db_path):
+    import database as db
+    import resume as resume_mod
+    data = resume_mod.load_resume()
+    data["documents"]["cover_letter_template"] = "Dear {company} team, about the {title} role. — Jane"
+    resume_mod.save_resume(data)
+
+    db.upsert_job({
+        "source_kind": "lever", "external_id": "lv:9", "company": "Acme Corp",
+        "title": "Head of Talent", "url": "https://jobs.lever.co/acme/9", "description": "Talent.",
+    }, db_path=db_path)
+
+    field = {"field_id": "c", "selector": "#c", "label": "Cover letter", "type": "textarea"}
+    known = client.post("/api/forms/analyze", json={
+        "url": "https://jobs.lever.co/acme/9", "fields": [field]}).get_json()
+    assert known["plan"][0]["value"] == "Dear Acme Corp team, about the Head of Talent role. — Jane"
+
+
+def test_cover_letter_is_skipped_when_placeholders_cannot_be_resolved(client):
+    import resume as resume_mod
+    data = resume_mod.load_resume()
+    data["documents"]["cover_letter_template"] = "Dear {company} team, about the {title} role."
+    resume_mod.save_resume(data)
+
+    field = {"field_id": "c", "selector": "#c", "label": "Cover letter", "type": "textarea"}
+    unknown = client.post("/api/forms/analyze", json={
+        "url": "https://careers.unknown.example/apply", "fields": [field]}).get_json()
+    assert unknown["plan"] == []
+    assert "template needs" in unknown["skipped"][0]["skip_reason"]

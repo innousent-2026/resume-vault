@@ -127,6 +127,29 @@ def autofill_values(resume: dict) -> dict:
     return {k: v for k, v in values.items() if v not in (None, "")}
 
 
+def cover_letter_placeholders(template: str) -> set[str]:
+    from string import Formatter
+    return {name for _, name, _, _ in Formatter().parse(template or "") if name}
+
+
+def render_cover_letter(template: str, context: dict) -> str | None:
+    """Fill {company}/{title} style placeholders.
+
+    Returns None if any placeholder has no value — typing a letter that still
+    says "Dear {company}" into a real application is worse than typing nothing.
+    """
+    if not template:
+        return None
+    needed = cover_letter_placeholders(template)
+    usable = {k: v for k, v in (context or {}).items() if v}
+    if needed - set(usable):
+        return None
+    try:
+        return template.format(**usable)
+    except (KeyError, IndexError, ValueError):
+        return None
+
+
 def total_years_experience(resume: dict) -> int | None:
     """Sum of distinct years covered by listed roles (overlaps counted once)."""
     years: set[int] = set()

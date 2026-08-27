@@ -243,14 +243,37 @@ def create_app(db_path: str | None = None) -> Flask:
         ats = form_detector.detect_ats(url)
         host = payload.get("host") or ""
         settings = {**DEFAULT_SETTINGS, **db.get_settings(path())}
+
+        job = db.find_job_by_url(url, path())
+        values = resume_mod.autofill_values(data)
+        unavailable = {}
+        template = (data.get("documents", {}) or {}).get("cover_letter_template")
+        letter = resume_mod.render_cover_letter(template, {
+            "company": (job or {}).get("company") or payload.get("company"),
+            "title": (job or {}).get("title") or payload.get("title"),
+            "first_name": values.get("first_name"),
+            "full_name": values.get("full_name"),
+        })
+        if letter:
+            values["cover_letter"] = letter
+        else:
+            values.pop("cover_letter", None)
+            if template:
+                needed = ", ".join(sorted(resume_mod.cover_letter_placeholders(template)))
+                unavailable["cover_letter"] = (
+                    f"your template needs {{{needed}}} and this page isn't a job we've scraped — "
+                    "paste the letter yourself"
+                )
+
         analysis = form_detector.analyze_form(
             fields=fields,
-            values=resume_mod.autofill_values(data),
+            values=values,
             url=url,
             learned=db.learned_mappings(ats, host, path()),
             include_sensitive=bool(settings.get("include_eeo_answers")),
+            unavailable=unavailable,
         )
-        analysis["job"] = db.find_job_by_url(url, path())
+        analysis["job"] = job
         analysis["quick_apply"] = bool(settings.get("quick_apply"))
         # Stated on every response so the client never has to assume otherwise.
         analysis["will_submit"] = False
