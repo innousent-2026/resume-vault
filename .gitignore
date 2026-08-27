@@ -154,3 +154,4 @@ __pycache__/
 # Personal resume data stays local; commit resume_data.example.json instead.
 resume_data.json
 resume_data.draft.json
+extension/e2e/node_modules
