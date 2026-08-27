@@ -1,0 +1,30 @@
+/* Highlights drawn on the employer's page. Kept deliberately minimal so we
+   don't fight the site's own layout — outline only, no box model changes. */
+
+input.jaa-candidate,
+select.jaa-candidate,
+textarea.jaa-candidate {
+  outline: 2px solid #2563eb !important;
+  outline-offset: 1px !important;
+  background-color: rgba(37, 99, 235, 0.06) !important;
+}
+
+input.jaa-review,
+select.jaa-review,
+textarea.jaa-review {
+  outline: 2px dashed #d97706 !important;
+  outline-offset: 1px !important;
+  background-color: rgba(217, 119, 6, 0.07) !important;
+}
+
+input.jaa-filled,
+select.jaa-filled,
+textarea.jaa-filled {
+  outline: 2px solid #16a34a !important;
+  outline-offset: 1px !important;
+  background-color: rgba(22, 163, 74, 0.07) !important;
+}
+
+#jaa-panel-host {
+  all: initial;
+}

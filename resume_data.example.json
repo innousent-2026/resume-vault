@@ -1,0 +1,91 @@
+{
+  "profile": {
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "preferred_name": "Jane",
+    "email": "jane.doe@example.com",
+    "phone": "(555) 123-4567",
+    "address": {
+      "line1": "123 Main St",
+      "line2": "",
+      "city": "Portland",
+      "state": "OR",
+      "postal_code": "97201",
+      "country": "United States"
+    },
+    "links": {
+      "linkedin": "https://linkedin.com/in/janedoe",
+      "github": "https://github.com/janedoe",
+      "portfolio": "https://janedoe.example.com"
+    },
+    "work_authorization": {
+      "authorized_to_work": "Yes",
+      "requires_sponsorship": "No"
+    }
+  },
+  "summary": "Senior people operations leader with 12 years across HR technology, talent acquisition and program management. Builds hiring systems that scale.",
+  "skills": [
+    "Talent Acquisition", "HRIS", "Workday", "People Analytics", "Program Management",
+    "Employee Relations", "Compensation Planning", "SQL", "Python", "Stakeholder Management"
+  ],
+  "experience": [
+    {
+      "company": "Northwind Systems",
+      "title": "Director of People Operations",
+      "location": "Portland, OR",
+      "start_date": "2021-03",
+      "end_date": null,
+      "bullets": [
+        "Rebuilt the end-to-end hiring funnel, cutting time-to-fill from 54 to 31 days.",
+        "Owned HRIS migration to Workday for 900 employees across three countries.",
+        "Built a people analytics practice reporting attrition drivers to the exec team."
+      ]
+    },
+    {
+      "company": "Cascade Health",
+      "title": "Senior Talent Partner",
+      "location": "Seattle, WA",
+      "start_date": "2017-01",
+      "end_date": "2021-02",
+      "bullets": [
+        "Hired 140+ clinical and technical roles against aggressive growth targets.",
+        "Introduced structured interviewing, lifting offer-accept rate 18 points."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "school": "University of Oregon",
+      "degree": "Bachelor of Science",
+      "field": "Business Administration",
+      "graduation_date": "2013-06",
+      "gpa": "3.7"
+    }
+  ],
+  "certifications": ["SHRM-SCP", "Workday HCM Core"],
+  "preferences": {
+    "titles": [
+      "Director of People Operations", "Head of Talent", "HR Business Partner",
+      "Director of Human Resources", "People Operations Manager"
+    ],
+    "keywords": ["people operations", "talent acquisition", "hris", "workday", "people analytics"],
+    "exclude_keywords": ["intern", "commission only", "unpaid", "door to door"],
+    "industries": ["Technology", "Healthcare", "Professional Services"],
+    "locations": ["Portland, OR", "Seattle, WA"],
+    "remote_only": false,
+    "min_salary": 145000,
+    "desired_salary": "175000",
+    "available_start_date": "Two weeks from offer",
+    "how_did_you_hear": "Company careers page"
+  },
+  "eeo": {
+    "gender": "Decline to self-identify",
+    "race": "Decline to self-identify",
+    "veteran_status": "I don't wish to answer",
+    "disability_status": "I don't wish to answer"
+  },
+  "documents": {
+    "resume_path": "~/Documents/resume.pdf",
+    "cover_letter_template": "Dear {company} hiring team,\n\nI'm applying for the {title} role. Over the last decade I've built people operations functions that scale with fast-growing teams, most recently owning the full hiring funnel and HRIS at Northwind Systems.\n\nI'd welcome the chance to talk about how that experience maps to what you're building.\n\nBest regards,\nJane Doe"
+  }
+}
