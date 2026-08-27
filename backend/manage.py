@@ -87,6 +87,36 @@ def cmd_import_resume(args):
         print(f"  - {problem}")
 
 
+DEMO_JOBS = [
+    ("Acme Corp", "Director of People Operations", "Portland, OR", False,
+     "Own people operations end to end: talent acquisition, HRIS (Workday), people analytics and "
+     "compensation planning for a 900-person company. $165,000 - $195,000.", 165000, 195000),
+    ("Northstar Health", "Head of Talent", "Remote - US", True,
+     "Lead talent acquisition for a distributed clinical team. Structured interviewing, employer "
+     "brand, and hiring analytics. $150,000 - $180,000.", 150000, 180000),
+    ("Bluepeak Software", "HR Business Partner", "Seattle, WA", False,
+     "Partner with engineering leaders on employee relations, performance and compensation cycles.",
+     None, None),
+    ("Cobalt Logistics", "Warehouse Shift Lead", "Tacoma, WA", False,
+     "Supervise a warehouse shift. Forklift certification required.", 52000, 61000),
+    ("Vantage Labs", "People Operations Intern", "Portland, OR", False,
+     "Unpaid internship supporting the people team.", None, None),
+]
+
+
+def cmd_demo(args):
+    """Seed a few illustrative postings so the dashboard has something to show."""
+    for index, (company, title, location, remote, description, lo, hi) in enumerate(DEMO_JOBS, start=1):
+        db.upsert_job({
+            "source_kind": "demo", "external_id": f"demo:{index}", "company": company,
+            "title": title, "location": location, "remote": remote,
+            "url": f"https://example.com/careers/{index}", "description": description,
+            "salary_min": lo, "salary_max": hi,
+        })
+    print(f"seeded {len(DEMO_JOBS)} demo postings")
+    cmd_score(args)
+
+
 def cmd_stats(args):
     print(json.dumps(db.stats(), indent=2))
 
@@ -122,6 +152,8 @@ def main():
     p.add_argument("pdf")
     p.add_argument("--out")
     p.set_defaults(func=cmd_import_resume)
+
+    sub.add_parser("demo", help="seed sample postings to try the dashboard").set_defaults(func=cmd_demo)
 
     sub.add_parser("stats", help="pipeline counts").set_defaults(func=cmd_stats)
 

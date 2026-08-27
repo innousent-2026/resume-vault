@@ -136,14 +136,14 @@ def location_fit(job: dict, prefs: dict) -> tuple[float, str]:
         return 1.0, "remote"
     if prefs.get("remote_only"):
         return 0.35, "not remote, and remote_only is set"
-    locations = [l.lower() for l in prefs.get("locations", []) if l]
+    locations = [l for l in prefs.get("locations", []) if l]
     if not locations:
         return 1.0, "no location preference"
     job_loc = (job.get("location") or "").lower()
     if not job_loc:
         return 0.95, "location not listed"
     for pref in locations:
-        city = pref.split(",")[0].strip()
+        city = pref.split(",")[0].strip().lower()
         if city and city in job_loc:
             return 1.0, f"matches preferred location ({pref})"
     return 0.6, f"outside preferred locations ({job.get('location')})"
@@ -228,5 +228,6 @@ def explain(score: float, matched_skills: list[str], matched_title: str | None, 
     if matched_title:
         bits.append(f"title lines up with '{matched_title}'")
     if matched_skills:
-        bits.append(f"{len(matched_skills)} of your skills appear in the posting")
+        count = len(matched_skills)
+        bits.append(f"{count} of your skills appear{'s' if count == 1 else ''} in the posting")
     return band + (" — " + "; ".join(bits) if bits else "")
